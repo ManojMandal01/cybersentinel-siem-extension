@@ -1,0 +1,252 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  display: flex;
+  min-height: 100vh;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #010409;
+  color: #e6edf3;
+  font-size: 14px;
+}
+
+.sidebar {
+  width: 220px;
+  background: #0d1117;
+  border-right: 1px solid #30363d;
+  padding: 20px 0;
+  flex-shrink: 0;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 16px;
+  color: #58a6ff;
+  padding: 0 20px 20px;
+  border-bottom: 1px solid #30363d;
+  margin-bottom: 12px;
+}
+
+.nav-link {
+  display: block;
+  padding: 10px 20px;
+  color: #8b949e;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.nav-link:hover, .nav-link.active {
+  color: #e6edf3;
+  background: #161b22;
+  border-left: 3px solid #58a6ff;
+}
+
+.content {
+  flex: 1;
+  padding: 24px 32px;
+  overflow-y: auto;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.topbar h1 { font-size: 22px; font-weight: 600; }
+
+.live-badge {
+  color: #3fb950;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.view { display: none; }
+.view.active { display: block; }
+
+.exec-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.exec-card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+}
+
+.exec-card.critical { border-color: #f85149; }
+
+.exec-num {
+  display: block;
+  font-size: 36px;
+  font-weight: 700;
+  color: #58a6ff;
+}
+
+.exec-card.critical .exec-num { color: #f85149; }
+
+.analyst-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.panel {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.panel.wide { grid-column: 1 / -1; }
+
+.panel h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #8b949e;
+  margin-bottom: 12px;
+}
+
+.table-wrap { overflow-x: auto; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+th, td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid #21262d;
+}
+
+th { color: #8b949e; font-weight: 600; }
+
+.timeline {
+  position: relative;
+  padding-left: 24px;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #30363d;
+}
+
+.timeline-item {
+  position: relative;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -20px;
+  top: 16px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #58a6ff;
+  border: 2px solid #0d1117;
+}
+
+.timeline-time {
+  font-size: 11px;
+  color: #8b949e;
+}
+
+.hunt-panel {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.hunt-panel input {
+  flex: 1;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  color: #e6edf3;
+  padding: 10px 14px;
+}
+
+.hunt-panel button {
+  background: #238636;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.hint { color: #8b949e; font-size: 12px; margin-bottom: 16px; }
+
+.settings-form fieldset {
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.settings-form legend {
+  color: #58a6ff;
+  font-weight: 600;
+  padding: 0 8px;
+}
+
+.settings-form label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.settings-form input[type="text"],
+.settings-form input[type="url"],
+.settings-form input[type="password"] {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  margin-top: 4px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #e6edf3;
+  padding: 8px 12px;
+}
+
+.settings-form button[type="submit"] {
+  background: #238636;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 24px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge.critical { background: rgba(248,81,73,0.2); color: #f85149; }
+.badge.high { background: rgba(210,153,34,0.2); color: #d29922; }
+.badge.medium { background: rgba(88,166,255,0.2); color: #58a6ff; }
+.badge.low { background: rgba(63,185,80,0.2); color: #3fb950; }

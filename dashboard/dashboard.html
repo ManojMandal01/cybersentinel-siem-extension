@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CyberSentinel SOC Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <nav class="sidebar">
+    <div class="brand">🛡️ CyberSentinel</div>
+    <a href="#executive" class="nav-link active" data-view="executive">Executive View</a>
+    <a href="#analyst" class="nav-link" data-view="analyst">Analyst View</a>
+    <a href="#timeline" class="nav-link" data-view="timeline">Threat Timeline</a>
+    <a href="#hunting" class="nav-link" data-view="hunting">Threat Hunting</a>
+    <a href="#iocs" class="nav-link" data-view="iocs">IOC Table</a>
+    <a href="#settings" class="nav-link" data-view="settings">Settings</a>
+  </nav>
+
+  <main class="content">
+    <header class="topbar">
+      <h1 id="viewTitle">Executive View</h1>
+      <span class="live-badge">● LIVE</span>
+    </header>
+
+    <div id="view-executive" class="view active">
+      <div class="exec-grid">
+        <div class="exec-card"><span class="exec-num" id="exThreats">0</span><span>Threats Today</span></div>
+        <div class="exec-card critical"><span class="exec-num" id="exCritical">0</span><span>Critical Alerts</span></div>
+        <div class="exec-card"><span class="exec-num" id="exDomains">0</span><span>Blocked Domains</span></div>
+        <div class="exec-card"><span class="exec-num" id="exDownloads">0</span><span>Malicious Downloads</span></div>
+      </div>
+    </div>
+
+    <div id="view-analyst" class="view">
+      <div class="analyst-grid">
+        <section class="panel">
+          <h3>MITRE ATT&CK Mapping</h3>
+          <div id="mitreTable" class="table-wrap"></div>
+        </section>
+        <section class="panel">
+          <h3>Threat Feed Hits</h3>
+          <div id="feedHits" class="table-wrap"></div>
+        </section>
+        <section class="panel wide">
+          <h3>User Activity</h3>
+          <div id="userActivity" class="table-wrap"></div>
+        </section>
+      </div>
+    </div>
+
+    <div id="view-timeline" class="view">
+      <div id="timeline" class="timeline"></div>
+    </div>
+
+    <div id="view-hunting" class="view">
+      <div class="hunt-panel">
+        <input type="text" id="dashHuntInput" placeholder="show phishing alerts" />
+        <button id="dashHuntBtn">Execute Query</button>
+      </div>
+      <p class="hint" id="huntHints"></p>
+      <div id="dashHuntResults" class="table-wrap"></div>
+    </div>
+
+    <div id="view-iocs" class="view">
+      <div id="iocTable" class="table-wrap"></div>
+    </div>
+
+    <div id="view-settings" class="view">
+      <form id="settingsForm" class="settings-form">
+        <fieldset>
+          <legend>Splunk HEC Integration</legend>
+          <label><input type="checkbox" id="splunkEnabled"> Enable Splunk</label>
+          <label>HEC URL <input type="url" id="splunkUrl" placeholder="https://splunk:8088"></label>
+          <label>HEC Token <input type="password" id="splunkToken"></label>
+          <label>Index <input type="text" id="splunkIndex" value="cybersentinel"></label>
+        </fieldset>
+        <fieldset>
+          <legend>Alert Channels</legend>
+          <label><input type="checkbox" id="browserPopup" checked> Browser Popup</label>
+          <label>Discord Webhook <input type="url" id="discordWebhook"></label>
+        </fieldset>
+        <fieldset>
+          <legend>Detection</legend>
+          <label><input type="checkbox" id="phishingEnabled" checked> Phishing Detection</label>
+          <label><input type="checkbox" id="scriptAnalysis" checked> Script Analysis</label>
+          <label><input type="checkbox" id="formMonitoring" checked> Form Monitoring</label>
+          <label><input type="checkbox" id="threatIntel" checked> Threat Intelligence</label>
+        </fieldset>
+        <button type="submit">Save Configuration</button>
+      </form>
+    </div>
+  </main>
+
+  <script src="dashboard.js" type="module"></script>
+</body>
+</html>
