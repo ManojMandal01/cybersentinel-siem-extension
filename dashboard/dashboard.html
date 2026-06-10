@@ -8,19 +8,20 @@
 </head>
 <body>
   <nav class="sidebar">
-    <div class="brand">🛡️ CyberSentinel</div>
+    <div class="brand">&#x1F6E1;&#xFE0F; CyberSentinel</div>
     <a href="#executive" class="nav-link active" data-view="executive">Executive View</a>
     <a href="#analyst" class="nav-link" data-view="analyst">Analyst View</a>
     <a href="#timeline" class="nav-link" data-view="timeline">Threat Timeline</a>
     <a href="#hunting" class="nav-link" data-view="hunting">Threat Hunting</a>
     <a href="#iocs" class="nav-link" data-view="iocs">IOC Table</a>
     <a href="#settings" class="nav-link" data-view="settings">Settings</a>
+    <a href="../tests/run.html" target="_blank" class="nav-link">Run Tests</a>
   </nav>
 
   <main class="content">
     <header class="topbar">
       <h1 id="viewTitle">Executive View</h1>
-      <span class="live-badge">● LIVE</span>
+      <span class="live-badge">&#x25CF; LIVE</span>
     </header>
 
     <div id="view-executive" class="view active">
@@ -86,6 +87,19 @@
           <label><input type="checkbox" id="scriptAnalysis" checked> Script Analysis</label>
           <label><input type="checkbox" id="formMonitoring" checked> Form Monitoring</label>
           <label><input type="checkbox" id="threatIntel" checked> Threat Intelligence</label>
+          <label>Monitoring Scope
+            <select id="monitoringScope" style="display:block;width:100%;max-width:480px;margin-top:4px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;padding:8px 12px;">
+              <option value="all">All Domains</option>
+              <option value="allowlist">Custom Allowlist Only</option>
+              <option value="blocklist">Exclude Blocklist Domains</option>
+            </select>
+          </label>
+          <label>Allowlist Domains (comma-separated)
+            <input type="text" id="allowlistDomains" placeholder="example.com, company.com">
+          </label>
+          <label>Blocklist Domains (comma-separated)
+            <input type="text" id="blocklistDomains" placeholder="internal.local, testing.lan">
+          </label>
         </fieldset>
         <button type="submit">Save Configuration</button>
       </form>

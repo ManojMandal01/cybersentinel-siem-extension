@@ -1,7 +1,12 @@
 import { RISK_WEIGHTS } from '../shared/constants.js';
-import { getRiskLevel } from '../shared/utils.js';
+import { getRiskLevel, isLegitimateDomain } from '../shared/utils.js';
 
 export function scoreEvent(event, detections = {}) {
+  const domain = event.domain || '';
+  if (isLegitimateDomain(domain) && event.event !== 'download' && !detections.malwareDelivery?.detected) {
+    return { risk_score: 0, risk_level: 'Low', factors: [] };
+  }
+
   let score = 0;
   const factors = [];
 

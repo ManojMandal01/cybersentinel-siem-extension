@@ -63,7 +63,8 @@ export const LEGITIMATE_DOMAINS = {
   facebook: ['facebook.com', 'fb.com', 'meta.com'],
   netflix: ['netflix.com'],
   chase: ['chase.com'],
-  coinbase: ['coinbase.com']
+  coinbase: ['coinbase.com'],
+  linkedin: ['linkedin.com', 'lnkd.in']
 };
 
 export const MITRE_TECHNIQUES = {
@@ -85,6 +86,11 @@ export const THREAT_FEEDS = {
   PHISHTANK: {
     name: 'PhishTank',
     url: 'https://data.phishtank.com/data/online-valid.json',
+    type: 'url'
+  },
+  URLHAUS: {
+    name: 'URLhaus',
+    url: 'https://urlhaus.abuse.ch/downloads/csv_recent/',
     type: 'url'
   }
 };
@@ -115,7 +121,10 @@ export const DEFAULT_CONFIG = {
     phishingEnabled: true,
     scriptAnalysisEnabled: true,
     formMonitoringEnabled: true,
-    threatIntelEnabled: true
+    threatIntelEnabled: true,
+    monitoringScope: 'all',
+    allowlistDomains: [],
+    blocklistDomains: []
   },
   ai: {
     enabled: false,

@@ -5,7 +5,7 @@ A browser extension that acts as a **mini SOC + Browser EDR + Threat Intelligenc
 ## Architecture
 
 ```text
-Browser Extension → Log Collection → Detection Engine → Alerting / IOC Gen → Splunk / SIEM → SOC Dashboard
+Browser Extension -> Log Collection -> Detection Engine -> Alerting / IOC Gen -> Splunk / SIEM -> SOC Dashboard
 ```
 
 ## Modules
@@ -16,7 +16,7 @@ Browser Extension → Log Collection → Detection Engine → Alerting / IOC Gen
 | Detection Engine | ✅ MVP | Phishing, login pages, redirects, scripts, credential harvesting, malware delivery |
 | Threat Intelligence | ✅ MVP | OpenPhish feed integration (cached) |
 | AI Analysis Engine | 🔶 Heuristic | Heuristic AI + pluggable external AI endpoint |
-| Risk Scoring Engine | ✅ | Weighted 0–100 scoring with Low/Medium/High/Critical |
+| Risk Scoring Engine | ✅ | Weighted 0-100 scoring with Low/Medium/High/Critical |
 | MITRE ATT&CK Mapping | ✅ | Auto-maps detections to T1566, T1059, T1027, T1056, T1105 |
 | IOC Generator | ✅ | URLs, domains, IPs, filenames from events |
 | Alert Engine | ✅ | Browser notifications + Discord webhook |
@@ -111,10 +111,10 @@ cybersentinel-siem-extension/
 
 | Score | Level |
 |-------|-------|
-| 0–25 | Low |
-| 26–50 | Medium |
-| 51–75 | High |
-| 76–100 | Critical |
+| 0-25 | Low |
+| 26-50 | Medium |
+| 51-75 | High |
+| 76-100 | Critical |
 
 ## Incremental Roadmap
 

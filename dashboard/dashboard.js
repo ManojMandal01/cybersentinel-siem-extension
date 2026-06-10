@@ -33,17 +33,52 @@ if (location.hash) {
   if (titles[view]) showView(view);
 }
 
+function createRiskBadge(level) {
+  const span = document.createElement('span');
+  const normalized = (level || 'low').toLowerCase();
+  span.className = `badge ${normalized}`;
+  span.textContent = level || '-';
+  return span;
+}
+
 function renderTable(container, headers, rows) {
+  container.textContent = '';
   if (!rows.length) {
-    container.innerHTML = '<p style="color:#8b949e;padding:12px">No data</p>';
+    const p = document.createElement('p');
+    p.style.color = '#8b949e';
+    p.style.padding = '12px';
+    p.textContent = 'No data';
+    container.appendChild(p);
     return;
   }
-  container.innerHTML = `
-    <table>
-      <thead><tr>${headers.map((h) => `<th>${h}</th>`).join('')}</tr></thead>
-      <tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>
-    </table>
-  `;
+  
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  const trHead = document.createElement('tr');
+  for (const h of headers) {
+    const th = document.createElement('th');
+    th.textContent = h;
+    trHead.appendChild(th);
+  }
+  thead.appendChild(trHead);
+  table.appendChild(thead);
+  
+  const tbody = document.createElement('tbody');
+  for (const r of rows) {
+    const tr = document.createElement('tr');
+    for (const c of r) {
+      const td = document.createElement('td');
+      if (c instanceof HTMLElement) {
+        td.appendChild(c);
+      } else {
+        td.textContent = c === undefined || c === null ? '' : String(c);
+      }
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  container.appendChild(table);
 }
 
 async function refreshExecutive() {
@@ -60,8 +95,8 @@ async function refreshAnalyst() {
     .filter((e) => e.technique)
     .slice(0, 20)
     .map((e) => [
-      e.event || '—',
-      `<span class="badge ${(e.risk_level || 'low').toLowerCase()}">${e.risk_level || '—'}</span>`,
+      e.event || '-',
+      createRiskBadge(e.risk_level),
       e.technique
     ]);
   renderTable(document.getElementById('mitreTable'), ['Detection', 'Risk', 'Technique'], mitreRows);
@@ -69,14 +104,14 @@ async function refreshAnalyst() {
   const feedRows = events
     .filter((e) => e.threat_intel_hit)
     .slice(0, 15)
-    .map((e) => [e.domain || '—', e.threat_feed || '—', e.url?.slice(0, 50) || '—']);
+    .map((e) => [e.domain || '-', e.threat_feed || '-', e.url?.slice(0, 50) || '-']);
   renderTable(document.getElementById('feedHits'), ['Domain', 'Feed', 'URL'], feedRows);
 
   const activityRows = events.slice(0, 25).map((e) => [
     new Date(e.timestamp).toLocaleTimeString(),
-    e.event || '—',
-    e.domain || '—',
-    String(e.risk_score ?? '—')
+    e.event || '-',
+    e.domain || '-',
+    String(e.risk_score ?? '-')
   ]);
   renderTable(document.getElementById('userActivity'), ['Time', 'Event', 'Domain', 'Risk'], activityRows);
 }
@@ -84,19 +119,47 @@ async function refreshAnalyst() {
 async function refreshTimeline() {
   const events = await send('GET_EVENTS', { limit: 30 });
   const container = document.getElementById('timeline');
-  container.innerHTML = events.map((e) => `
-    <div class="timeline-item">
-      <div class="timeline-time">${new Date(e.timestamp).toLocaleTimeString()}</div>
-      <strong>${e.event || 'event'}</strong>
-      ${e.domain ? ` — ${e.domain}` : ''}
-      ${e.risk_score ? ` <span class="badge ${(e.risk_level || '').toLowerCase()}">${e.risk_score}</span>` : ''}
-    </div>
-  `).join('') || '<p style="color:#8b949e">No events recorded yet</p>';
+  container.textContent = '';
+  
+  if (!events.length) {
+    const p = document.createElement('p');
+    p.style.color = '#8b949e';
+    p.textContent = 'No events recorded yet';
+    container.appendChild(p);
+    return;
+  }
+  
+  for (const e of events) {
+    const item = document.createElement('div');
+    item.className = 'timeline-item';
+    
+    const time = document.createElement('div');
+    time.className = 'timeline-time';
+    time.textContent = new Date(e.timestamp).toLocaleTimeString();
+    item.appendChild(time);
+    
+    const strong = document.createElement('strong');
+    strong.textContent = e.event || 'event';
+    item.appendChild(strong);
+    
+    if (e.domain) {
+      const textNode = document.createTextNode(` - ${e.domain}`);
+      item.appendChild(textNode);
+    }
+    
+    if (e.risk_score) {
+      const badge = createRiskBadge(e.risk_level);
+      badge.textContent = String(e.risk_score);
+      item.appendChild(badge);
+    }
+    
+    container.appendChild(item);
+  }
 }
 
 async function refreshIocs() {
   const iocs = await send('GET_IOCS', { limit: 50 });
-  const rows = iocs.map((i) => [i.ioc_type, i.value, i.context || '—', new Date(i.createdAt).toLocaleString()]);
+  const rows = iocs.map((i) => [i.ioc_type, i.value, i.context || '-', new Date(i.createdAt).toLocaleString()]);
   renderTable(document.getElementById('iocTable'), ['Type', 'Value', 'Context', 'Created'], rows);
 }
 
@@ -109,9 +172,9 @@ async function initHunting() {
     if (!query) return;
     const result = await send('HUNT_QUERY', { query });
     const rows = (result.results || []).slice(0, 30).map((r) => [
-      r.title || r.event || r.domain || '—',
-      r.domain || r.value || '—',
-      String(r.risk_score ?? r.risk_level ?? '—')
+      r.title || r.event || r.domain || '-',
+      r.domain || r.value || '-',
+      String(r.risk_score ?? r.risk_level ?? '-')
     ]);
     renderTable(
       document.getElementById('dashHuntResults'),
@@ -119,7 +182,12 @@ async function initHunting() {
       result.error ? [] : rows
     );
     if (result.error) {
-      document.getElementById('dashHuntResults').innerHTML = `<p style="color:#f85149">${result.error}</p>`;
+      const p = document.createElement('p');
+      p.style.color = '#f85149';
+      p.textContent = result.error;
+      const resultsDiv = document.getElementById('dashHuntResults');
+      resultsDiv.textContent = '';
+      resultsDiv.appendChild(p);
     }
   });
 }
@@ -136,6 +204,9 @@ async function initSettings() {
   document.getElementById('scriptAnalysis').checked = config.detection?.scriptAnalysisEnabled !== false;
   document.getElementById('formMonitoring').checked = config.detection?.formMonitoringEnabled !== false;
   document.getElementById('threatIntel').checked = config.detection?.threatIntelEnabled !== false;
+  document.getElementById('monitoringScope').value = config.detection?.monitoringScope || 'all';
+  document.getElementById('allowlistDomains').value = (config.detection?.allowlistDomains || []).join(', ');
+  document.getElementById('blocklistDomains').value = (config.detection?.blocklistDomains || []).join(', ');
 
   document.getElementById('settingsForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -156,7 +227,10 @@ async function initSettings() {
           phishingEnabled: document.getElementById('phishingEnabled').checked,
           scriptAnalysisEnabled: document.getElementById('scriptAnalysis').checked,
           formMonitoringEnabled: document.getElementById('formMonitoring').checked,
-          threatIntelEnabled: document.getElementById('threatIntel').checked
+          threatIntelEnabled: document.getElementById('threatIntel').checked,
+          monitoringScope: document.getElementById('monitoringScope').value,
+          allowlistDomains: document.getElementById('allowlistDomains').value.split(',').map((d) => d.trim()).filter(Boolean),
+          blocklistDomains: document.getElementById('blocklistDomains').value.split(',').map((d) => d.trim()).filter(Boolean)
         }
       }
     });

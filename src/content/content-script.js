@@ -5,6 +5,8 @@
     return window.location.hostname;
   }
 
+  let lastFieldsSerialized = '';
+
   function scanForms() {
     const forms = document.querySelectorAll('form');
     const fields = [];
@@ -12,13 +14,17 @@
     document.querySelectorAll('input, textarea, select').forEach((el) => {
       fields.push({
         type: el.type || el.tagName.toLowerCase(),
-        name: el.name,
-        id: el.id,
-        autocomplete: el.autocomplete
+        name: el.name || '',
+        id: el.id || '',
+        autocomplete: el.autocomplete || ''
       });
     });
 
     if (fields.length === 0) return;
+
+    const fieldsSerialized = JSON.stringify(fields);
+    if (fieldsSerialized === lastFieldsSerialized) return;
+    lastFieldsSerialized = fieldsSerialized;
 
     const hasPassword = fields.some((f) => f.type === 'password');
     const hasLogin = hasPassword || fields.some((f) =>
@@ -132,8 +138,10 @@
     monitorPermissions();
     sendPageAnalysis();
 
+    let scanTimeout;
     const observer = new MutationObserver(() => {
-      scanForms();
+      clearTimeout(scanTimeout);
+      scanTimeout = setTimeout(scanForms, 250);
     });
     observer.observe(document.body, { childList: true, subtree: true });
   }

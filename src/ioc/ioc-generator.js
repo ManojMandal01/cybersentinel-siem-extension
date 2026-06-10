@@ -1,6 +1,8 @@
-import { extractDomain } from '../shared/utils.js';
+import { extractDomain, isInternalBrowserUrl } from '../shared/utils.js';
 
 export function generateIocs(event, detections = {}) {
+  if (isInternalBrowserUrl(event.url)) return [];
+
   const iocs = [];
   const seen = new Set();
 

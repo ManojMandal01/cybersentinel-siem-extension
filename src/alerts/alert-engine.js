@@ -54,14 +54,18 @@ function buildAlertMessage(event, scoring, detections) {
 }
 
 async function showBrowserAlert(alert) {
-  const iconUrl = chrome.runtime.getURL('icons/icon128.png');
-  await chrome.notifications.create({
-    type: 'basic',
-    iconUrl,
-    title: `${alert.risk_level.toUpperCase()} ALERT: ${alert.title}`,
-    message: alert.message,
-    priority: alert.risk_level === 'Critical' ? 2 : 1
-  });
+  try {
+    const iconUrl = chrome.runtime.getURL('icons/icon128.png');
+    await chrome.notifications.create({
+      type: 'basic',
+      iconUrl,
+      title: `${alert.risk_level.toUpperCase()} ALERT: ${alert.title}`,
+      message: alert.message,
+      priority: alert.risk_level === 'Critical' ? 2 : 1
+    });
+  } catch (err) {
+    console.warn('[CyberSentinel] Notification failed:', err);
+  }
 }
 
 async function sendDiscordWebhook(webhookUrl, alert) {
@@ -71,7 +75,7 @@ async function sendDiscordWebhook(webhookUrl, alert) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         embeds: [{
-          title: `${alert.risk_level} — ${alert.title}`,
+          title: `${alert.risk_level} - ${alert.title}`,
           description: alert.message,
           color: alert.risk_level === 'Critical' ? 0xff0000 : alert.risk_level === 'High' ? 0xff6600 : 0xffcc00,
           fields: [

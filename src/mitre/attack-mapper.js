@@ -1,7 +1,15 @@
 import { MITRE_TECHNIQUES } from '../shared/constants.js';
+import { isLegitimateDomain } from '../shared/utils.js';
 
 const DETECTION_MAP = [
-  { match: (e, d) => d.phishing?.classification === 'phishing' || d.loginPage?.isPotentialPhishing, technique: MITRE_TECHNIQUES.PHISHING, name: 'Phishing' },
+  {
+    match: (e, d) => {
+      if (isLegitimateDomain(e.domain || '')) return false;
+      return d.phishing?.classification === 'phishing' || d.loginPage?.isPotentialPhishing;
+    },
+    technique: MITRE_TECHNIQUES.PHISHING,
+    name: 'Phishing'
+  },
   { match: (e, d) => d.scriptAnalysis?.results?.some((r) => r.detections.some((x) => ['eval', 'new Function'].includes(x.name))), technique: MITRE_TECHNIQUES.JS_PAYLOAD, name: 'JavaScript Payload' },
   { match: (e, d) => d.scriptAnalysis?.hasObfuscation, technique: MITRE_TECHNIQUES.OBFUSCATION, name: 'Obfuscation' },
   { match: (e, d) => d.credentialHarvesting?.detected || e.event === 'credential_form_detected', technique: MITRE_TECHNIQUES.CREDENTIAL_THEFT, name: 'Credential Theft' },

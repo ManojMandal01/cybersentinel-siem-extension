@@ -1,5 +1,5 @@
 import { BRAND_KEYWORDS } from '../shared/constants.js';
-import { detectBrandInDomain, extractDomain } from '../shared/utils.js';
+import { detectBrandInDomain, extractDomain, isLegitimateDomain } from '../shared/utils.js';
 
 export async function analyzeWithAi(context, config) {
   if (!config?.ai?.enabled || !config?.ai?.endpoint) {
@@ -38,7 +38,7 @@ function analyzeHeuristic(context) {
   let score = 0;
   const signals = [];
 
-  if (brand && context.hasLoginForm) {
+  if (brand && context.hasLoginForm && !isLegitimateDomain(domain)) {
     score += 40;
     signals.push('brand_login_form');
   }

@@ -32,17 +32,21 @@ export async function scanExtensions() {
 }
 
 export function initExtensionMonitor(onEvent) {
-  if (!chrome.management) return;
+  if (!chrome.management?.onInstalled) return;
 
-  chrome.management.onInstalled.addListener((ext) => {
-    onEvent({ ...analyzeExtension(ext), changeType: 'installed' });
-  });
+  chrome.permissions.contains({ permissions: ['management'] }, (granted) => {
+    if (!granted) return;
 
-  chrome.management.onEnabled.addListener((ext) => {
-    onEvent({ ...analyzeExtension(ext), changeType: 'enabled' });
-  });
+    chrome.management.onInstalled.addListener((ext) => {
+      onEvent({ ...analyzeExtension(ext), changeType: 'installed' });
+    });
 
-  chrome.management.onDisabled.addListener((ext) => {
-    onEvent({ ...analyzeExtension(ext), changeType: 'disabled' });
+    chrome.management.onEnabled.addListener((ext) => {
+      onEvent({ ...analyzeExtension(ext), changeType: 'enabled' });
+    });
+
+    chrome.management.onDisabled.addListener((ext) => {
+      onEvent({ ...analyzeExtension(ext), changeType: 'disabled' });
+    });
   });
 }

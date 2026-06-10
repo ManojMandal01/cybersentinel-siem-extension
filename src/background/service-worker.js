@@ -14,7 +14,7 @@ import { scoreEvent } from '../risk/risk-scorer.js';
 import { mapToMitre } from '../mitre/attack-mapper.js';
 import { generateIocs } from '../ioc/ioc-generator.js';
 import { createAlert, shouldAlert } from '../alerts/alert-engine.js';
-import { checkReputation, refreshThreatFeeds } from '../intel/threat-feeds.js';
+import { checkReputation, refreshThreatFeeds, sanitizeThreatCache } from '../intel/threat-feeds.js';
 import { analyzeWithAi } from '../ai/analysis-engine.js';
 import { sendToSplunk } from '../siem/splunk-client.js';
 import { executeHuntQuery, getAvailableQueries } from '../hunting/query-engine.js';
@@ -22,42 +22,96 @@ import {
   appendEvent, appendIoc, getConfig, setConfig, getStats, getEvents, getAlerts, getIocs
 } from '../shared/storage.js';
 import { DEFAULT_CONFIG } from '../shared/constants.js';
+import { domainMatches, extractDomain, isInternalBrowserUrl, normalizeDomain } from '../shared/utils.js';
 
-let config = { ...DEFAULT_CONFIG };
+export let config = { ...DEFAULT_CONFIG };
+
+let initPromise = null;
+
+function mergeConfig(defaults, stored = {}) {
+  return {
+    ...defaults,
+    ...stored,
+    splunk: { ...defaults.splunk, ...(stored.splunk || {}) },
+    alerts: { ...defaults.alerts, ...(stored.alerts || {}) },
+    detection: { ...defaults.detection, ...(stored.detection || {}) },
+    ai: { ...defaults.ai, ...(stored.ai || {}) }
+  };
+}
 
 async function init() {
-  const stored = await getConfig();
-  if (stored) config = { ...DEFAULT_CONFIG, ...stored };
-  else await setConfig(config);
+  if (initPromise) return initPromise;
 
-  await refreshThreatFeeds();
+  initPromise = (async () => {
+    const stored = await getConfig();
+    if (stored) config = mergeConfig(DEFAULT_CONFIG, stored);
+    else await setConfig(config);
 
-  chrome.alarms.create('threatFeedRefresh', { periodInMinutes: 60 });
+    await sanitizeThreatCache();
+    await refreshThreatFeeds();
+
+    chrome.alarms.create('threatFeedRefresh', { periodInMinutes: 60 });
+  })();
+
+  try {
+    return await initPromise;
+  } catch (err) {
+    initPromise = null;
+    throw err;
+  }
 }
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'threatFeedRefresh') refreshThreatFeeds();
 });
 
-async function processSecurityPipeline(rawEvent, pageContext = {}) {
+export async function processSecurityPipeline(rawEvent, pageContext = {}) {
+  if (isInternalBrowserUrl(rawEvent.url)) {
+    return { skipped: true, reason: 'internal_browser_url' };
+  }
+
+  // Check monitoring scope
+  const domain = normalizeDomain(rawEvent.domain) || extractDomain(rawEvent.url || '');
+  if (domain) {
+    const scope = config.detection?.monitoringScope || 'all';
+    const allowlist = config.detection?.allowlistDomains || [];
+    const blocklist = config.detection?.blocklistDomains || [];
+
+    if (scope === 'allowlist') {
+      const isAllowed = allowlist.some((d) => domainMatches(domain, d));
+      if (!isAllowed) {
+        return { skipped: true, reason: 'not_in_allowlist' };
+      }
+    } else if (scope === 'blocklist') {
+      const isBlocked = blocklist.some((d) => domainMatches(domain, d));
+      if (isBlocked) {
+        return { skipped: true, reason: 'in_blocklist' };
+      }
+    }
+  }
+
   const detections = {};
 
   if (rawEvent.url) {
     detections.domainIntel = await enrichDomainIntel(rawEvent.url);
-    detections.phishing = detectPhishing(rawEvent.url, pageContext);
-    detections.threatIntel = await checkReputation(rawEvent.url);
-    detections.loginPage = detectLoginPage(rawEvent.url, pageContext);
+    if (config.detection?.phishingEnabled !== false) {
+      detections.phishing = detectPhishing(rawEvent.url, pageContext);
+      detections.loginPage = detectLoginPage(rawEvent.url, pageContext);
+    }
+    if (config.detection?.threatIntelEnabled !== false) {
+      detections.threatIntel = await checkReputation(rawEvent.url);
+    }
   }
 
-  if (rawEvent.redirectChain) {
+  if (rawEvent.redirectChain && config.detection?.phishingEnabled !== false) {
     detections.redirectAnalysis = analyzeRedirectChain(rawEvent.redirectChain);
   }
 
-  if (pageContext.scripts) {
+  if (pageContext.scripts && config.detection?.scriptAnalysisEnabled !== false) {
     detections.scriptAnalysis = analyzeScriptsFromPage(pageContext.scripts);
   }
 
-  if (rawEvent.isCredentialForm || rawEvent.hasPassword) {
+  if ((rawEvent.isCredentialForm || rawEvent.hasPassword) && config.detection?.formMonitoringEnabled !== false) {
     detections.credentialHarvesting = detectCredentialHarvesting(rawEvent.url || '', {
       ...pageContext,
       ...rawEvent,
@@ -71,7 +125,7 @@ async function processSecurityPipeline(rawEvent, pageContext = {}) {
     detections.malwareDelivery = analyzeMalwareDelivery(rawEvent);
   }
 
-  if (rawEvent.url && pageContext) {
+  if (rawEvent.url && pageContext && config.ai?.enabled) {
     detections.ai = await analyzeWithAi({ ...pageContext, url: rawEvent.url }, config);
   }
 
@@ -113,18 +167,28 @@ async function processSecurityPipeline(rawEvent, pageContext = {}) {
   return { event: enrichedEvent, scoring, mitre, detections, iocs };
 }
 
+function safeHandleEvent(event) {
+  handleCollectedEvent(event).catch((err) => {
+    console.error('[CyberSentinel] Unhandled pipeline error:', err);
+  });
+}
+
 async function handleCollectedEvent(event) {
   try {
     await processSecurityPipeline(event);
   } catch (err) {
     console.error('[CyberSentinel] Pipeline error:', err);
-    await appendEvent(event);
+    try {
+      await appendEvent(event);
+    } catch (storeErr) {
+      console.error('[CyberSentinel] Failed to store event:', storeErr);
+    }
   }
 }
 
-initUrlCollector(handleCollectedEvent);
-initDownloadMonitor(handleCollectedEvent);
-initExtensionMonitor(handleCollectedEvent);
+initUrlCollector(safeHandleEvent);
+initDownloadMonitor(safeHandleEvent);
+initExtensionMonitor(safeHandleEvent);
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   handleMessage(message, sender).then(sendResponse).catch((err) => {
@@ -136,10 +200,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 async function handleMessage(message, sender) {
   switch (message.type) {
     case 'FORM_DETECTED': {
+      let domain = message.domain;
+      try {
+        if (sender.tab?.url) domain = new URL(sender.tab.url).hostname;
+      } catch {
+        domain = message.domain || '';
+      }
       const event = processFormDetection({
         ...message,
-        url: sender.tab?.url,
-        domain: sender.tab?.url ? new URL(sender.tab.url).hostname : message.domain
+        url: sender.tab?.url || message.url,
+        domain
       });
       return processSecurityPipeline(event, message);
     }
@@ -179,9 +249,14 @@ async function handleMessage(message, sender) {
   }
 }
 
-chrome.runtime.onInstalled.addListener(async () => {
-  await init();
-  console.log('[CyberSentinel] SIEM extension initialized');
+chrome.runtime.onInstalled.addListener(() => {
+  init()
+    .then(() => console.log('[CyberSentinel] SIEM extension initialized'))
+    .catch((err) => console.error('[CyberSentinel] Init failed:', err));
 });
 
-init();
+chrome.runtime.onStartup.addListener(() => {
+  init().catch((err) => console.error('[CyberSentinel] Startup init failed:', err));
+});
+
+init().catch((err) => console.error('[CyberSentinel] Init failed:', err));

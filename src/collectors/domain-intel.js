@@ -34,7 +34,8 @@ export async function resolveDomainIp(domain) {
   try {
     const response = await fetch(`https://dns.google/resolve?name=${domain}&type=A`);
     const data = await response.json();
-    return data.Answer?.[0]?.data || null;
+    const record = data.Answer?.find((a) => a.type === 1) || data.Answer?.[0];
+    return record?.data?.replace(/\.$/, '') || null;
   } catch {
     return null;
   }

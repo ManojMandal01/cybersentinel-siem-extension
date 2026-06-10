@@ -42,7 +42,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["dashboard/dashboard.html"],
+      "resources": ["dashboard/dashboard.html", "tests/run.html", "tests/suite.js"],
       "matches": ["<all_urls>"]
     }
   ]

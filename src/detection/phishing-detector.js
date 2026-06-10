@@ -1,6 +1,6 @@
 import { BRAND_KEYWORDS, LEGITIMATE_DOMAINS } from '../shared/constants.js';
 import {
-  detectBrandInDomain, extractDomain, hasHomograph, levenshtein, urlEntropy
+  detectBrandInDomain, domainMatches, extractDomain, hasHomograph, levenshtein, urlEntropy
 } from '../shared/utils.js';
 
 export function checkTyposquatting(domain) {
@@ -47,7 +47,8 @@ export function analyzeUrl(url) {
   if (features.hasAtSymbol) signals.push({ type: 'at_symbol_redirect' });
   if (features.hasIpAddress) signals.push({ type: 'ip_in_url' });
   if (impersonatedBrand) {
-    const isLegit = (LEGITIMATE_DOMAINS[impersonatedBrand] || []).some((d) => domain.endsWith(d));
+    const legitDomains = LEGITIMATE_DOMAINS[impersonatedBrand] || [];
+    const isLegit = legitDomains.some((d) => domainMatches(domain, d));
     if (!isLegit) signals.push({ type: 'brand_impersonation', brand: impersonatedBrand });
   }
 
@@ -63,13 +64,15 @@ export function detectPhishing(url, pageContext = {}) {
   const signals = [...urlAnalysis.signals];
 
   if (pageContext.hasLoginForm && urlAnalysis.impersonatedBrand) {
-    signals.push({ type: 'login_on_impersonated_domain', brand: urlAnalysis.impersonatedBrand });
+    const legitDomains = LEGITIMATE_DOMAINS[urlAnalysis.impersonatedBrand] || [];
+    const isLegit = legitDomains.some((d) => domainMatches(urlAnalysis.domain, d));
+    if (!isLegit) {
+      signals.push({ type: 'login_on_impersonated_domain', brand: urlAnalysis.impersonatedBrand });
+    }
   }
 
-  const isPhishing = signals.length >= 1 && (
-    urlAnalysis.isPhishing ||
-    signals.some((s) => ['login_on_impersonated_domain', 'brand_impersonation'].includes(s.type))
-  );
+  const isPhishing = urlAnalysis.isPhishing ||
+    signals.some((s) => ['login_on_impersonated_domain', 'brand_impersonation'].includes(s.type));
 
   return {
     classification: isPhishing ? 'phishing' : 'benign',

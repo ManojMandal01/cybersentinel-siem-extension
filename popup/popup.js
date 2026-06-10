@@ -13,24 +13,33 @@ async function loadStats() {
 async function loadAlerts() {
   const alerts = await send('GET_ALERTS', { limit: 5 });
   const container = document.getElementById('alertsList');
+  container.textContent = '';
 
   if (!alerts.length) {
-    container.innerHTML = '<div class="empty">No alerts yet — monitoring active</div>';
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = 'No alerts yet - monitoring active';
+    container.appendChild(empty);
     return;
   }
 
-  container.innerHTML = alerts.map((a) => `
-    <div class="alert-item ${a.risk_level?.toLowerCase()}">
-      <div class="alert-title">${escapeHtml(a.title)}</div>
-      <div class="alert-meta">${escapeHtml(a.domain || '')} · Risk ${a.risk_score} · ${a.technique || '—'}</div>
-    </div>
-  `).join('');
-}
+  for (const alert of alerts) {
+    const item = document.createElement('div');
+    const level = String(alert.risk_level || 'low').toLowerCase();
+    item.className = `alert-item ${['critical', 'high', 'medium', 'low'].includes(level) ? level : 'low'}`;
 
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+    const title = document.createElement('div');
+    title.className = 'alert-title';
+    title.textContent = alert.title || 'Security Alert';
+    item.appendChild(title);
+
+    const meta = document.createElement('div');
+    meta.className = 'alert-meta';
+    meta.textContent = `${alert.domain || ''} | Risk ${alert.risk_score ?? '-'} | ${alert.technique || '-'}`;
+    item.appendChild(meta);
+
+    container.appendChild(item);
+  }
 }
 
 document.getElementById('huntBtn').addEventListener('click', async () => {

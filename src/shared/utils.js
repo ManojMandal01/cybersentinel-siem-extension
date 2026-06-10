@@ -1,12 +1,53 @@
+import { LEGITIMATE_DOMAINS } from './constants.js';
+
+const INTERNAL_URL_SCHEMES = /^(chrome|chrome-extension|edge|about|moz-extension|brave|devtools):/i;
+
 export function now() {
   return new Date().toISOString();
 }
 
+export function isInternalBrowserUrl(url) {
+  if (!url) return false;
+  return INTERNAL_URL_SCHEMES.test(url);
+}
+
+export function isLegitimateDomain(domain) {
+  const host = normalizeDomain(domain);
+  if (!host) return false;
+  const allLegit = Object.values(LEGITIMATE_DOMAINS).flat();
+  return allLegit.some((d) => host === d || host.endsWith('.' + d));
+}
+
+export function normalizeDomain(value) {
+  if (!value) return '';
+  const input = String(value).trim().toLowerCase().replace(/\.$/, '');
+  if (!input) return '';
+
+  try {
+    return new URL(input.includes('://') ? input : `https://${input}`).hostname
+      .toLowerCase()
+      .replace(/\.$/, '');
+  } catch {
+    return input
+      .replace(/^https?:\/\//, '')
+      .split('/')[0]
+      .split(':')[0]
+      .replace(/\.$/, '');
+  }
+}
+
+export function domainMatches(candidate, rule) {
+  const host = normalizeDomain(candidate);
+  const normalizedRule = normalizeDomain(rule);
+  if (!host || !normalizedRule) return false;
+  return host === normalizedRule || host.endsWith('.' + normalizedRule);
+}
+
 export function extractDomain(url) {
   try {
-    return new URL(url).hostname.toLowerCase();
+    return normalizeDomain(new URL(url).hostname);
   } catch {
-    return '';
+    return normalizeDomain(url);
   }
 }
 

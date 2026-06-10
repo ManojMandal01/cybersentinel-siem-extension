@@ -1,5 +1,5 @@
 import { LEGITIMATE_DOMAINS } from '../shared/constants.js';
-import { detectBrandInDomain, extractDomain } from '../shared/utils.js';
+import { detectBrandInDomain, domainMatches, extractDomain } from '../shared/utils.js';
 
 export function detectLoginPage(url, pageContext) {
   const domain = extractDomain(url);
@@ -17,7 +17,7 @@ export function detectLoginPage(url, pageContext) {
     for (const [key, domains] of Object.entries(LEGITIMATE_DOMAINS)) {
       if (title.includes(key)) {
         impersonatedBrand = key;
-        const isLegitDomain = domains.some((d) => domain.endsWith(d));
+        const isLegitDomain = domains.some((d) => domainMatches(domain, d));
         if (!isLegitDomain) {
           return {
             isLoginPage: true,
@@ -34,7 +34,7 @@ export function detectLoginPage(url, pageContext) {
 
   if (impersonatedBrand) {
     const legitDomains = LEGITIMATE_DOMAINS[impersonatedBrand] || [];
-    const isLegit = legitDomains.some((d) => domain.endsWith(d));
+    const isLegit = legitDomains.some((d) => domainMatches(domain, d));
     if (!isLegit) {
       return {
         isLoginPage: true,

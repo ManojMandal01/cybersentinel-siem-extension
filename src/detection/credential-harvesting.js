@@ -1,5 +1,5 @@
 import { LEGITIMATE_DOMAINS } from '../shared/constants.js';
-import { extractDomain } from '../shared/utils.js';
+import { extractDomain, isLegitimateDomain } from '../shared/utils.js';
 
 export function detectCredentialHarvesting(url, context) {
   const domain = extractDomain(url);
@@ -11,9 +11,7 @@ export function detectCredentialHarvesting(url, context) {
     return { detected: false };
   }
 
-  const isKnownDomain = Object.values(LEGITIMATE_DOMAINS)
-    .flat()
-    .some((d) => domain.endsWith(d));
+  const isKnownDomain = isLegitimateDomain(domain);
 
   const signals = [];
   if (hasPasswordForm) signals.push('password_form');
