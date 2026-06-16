@@ -64,7 +64,9 @@ export const LEGITIMATE_DOMAINS = {
   netflix: ['netflix.com'],
   chase: ['chase.com'],
   coinbase: ['coinbase.com'],
-  linkedin: ['linkedin.com', 'lnkd.in']
+  linkedin: ['linkedin.com', 'lnkd.in'],
+  github: ['github.com', 'githubusercontent.com', 'raw.githubusercontent.com'],
+  gitlab: ['gitlab.com']
 };
 
 export const MITRE_TECHNIQUES = {

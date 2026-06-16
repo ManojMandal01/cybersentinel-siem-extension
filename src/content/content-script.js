@@ -39,7 +39,7 @@
         url: window.location.href,
         pageTitle: document.title,
         fields,
-        forms: forms.length,
+        forms: Array.from(forms).map((f) => ({ action: f.action || '' })),
         hasPassword,
         hasLoginForm: hasLogin
       });

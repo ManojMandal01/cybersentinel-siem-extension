@@ -135,6 +135,29 @@ export async function processSecurityPipeline(rawEvent, pageContext = {}) {
   );
   const mitre = mapToMitre(rawEvent, detections);
 
+  const evidence = [];
+  if (rawEvent.event === 'credential_form_detected') {
+    if (rawEvent.hasPassword) {
+      evidence.push('password field found');
+    }
+    const currentDomain = rawEvent.domain || (rawEvent.url ? extractDomain(rawEvent.url) : '');
+    let hasExternalSubmit = false;
+    if (rawEvent.forms && Array.isArray(rawEvent.forms)) {
+      hasExternalSubmit = rawEvent.forms.some((f) => {
+        if (!f.action) return false;
+        try {
+          const actionDomain = new URL(f.action, rawEvent.url).hostname;
+          return actionDomain && actionDomain !== currentDomain;
+        } catch {
+          return false;
+        }
+      });
+    }
+    if (hasExternalSubmit) {
+      evidence.push('external submit action');
+    }
+  }
+
   const enrichedEvent = {
     ...rawEvent,
     risk_score: scoring.risk_score,
@@ -142,6 +165,7 @@ export async function processSecurityPipeline(rawEvent, pageContext = {}) {
     technique: mitre.technique,
     threat_intel_hit: detections.threatIntel?.malicious || false,
     threat_feed: detections.threatIntel?.entity,
+    evidence: evidence.length > 0 ? evidence : undefined,
     detections: {
       phishing: detections.phishing?.classification,
       credentialHarvesting: detections.credentialHarvesting?.detected,

@@ -94,11 +94,27 @@ async function refreshAnalyst() {
   const mitreRows = events
     .filter((e) => e.technique)
     .slice(0, 20)
-    .map((e) => [
-      e.event || '-',
-      createRiskBadge(e.risk_level),
-      e.technique
-    ]);
+    .map((e) => {
+      let detectionCell;
+      if (e.event === 'credential_form_detected') {
+        const span = document.createElement('span');
+        span.textContent = e.event;
+        span.style.cursor = 'pointer';
+        span.style.textDecoration = 'underline';
+        span.style.color = '#58a6ff';
+        span.addEventListener('click', () => {
+          showDetectionDetailsModal(e);
+        });
+        detectionCell = span;
+      } else {
+        detectionCell = e.event || '-';
+      }
+      return [
+        detectionCell,
+        createRiskBadge(e.risk_level),
+        e.technique
+      ];
+    });
   renderTable(document.getElementById('mitreTable'), ['Detection', 'Risk', 'Technique'], mitreRows);
 
   const feedRows = events
@@ -237,6 +253,34 @@ async function initSettings() {
     alert('Configuration saved');
   });
 }
+
+function showDetectionDetailsModal(e) {
+  const modal = document.getElementById('detailsModal');
+  const codeEl = document.getElementById('modalJson');
+
+  const details = {
+    event_id: e.id || e.event_id || "evt_001",
+    url: e.url || "https://example.com/login",
+    risk_score: e.risk_score ?? 45,
+    mitre: e.technique || "T1056",
+    timestamp: e.timestamp || e.storedAt || new Date().toISOString(),
+    evidence: e.evidence || ["password field found", "external submit action"]
+  };
+
+  codeEl.textContent = JSON.stringify(details, null, 2);
+  modal.classList.add('active');
+}
+
+document.getElementById('modalClose')?.addEventListener('click', () => {
+  document.getElementById('detailsModal')?.classList.remove('active');
+});
+
+window.addEventListener('click', (event) => {
+  const modal = document.getElementById('detailsModal');
+  if (event.target === modal) {
+    modal.classList.remove('active');
+  }
+});
 
 async function refresh() {
   await refreshExecutive();

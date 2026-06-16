@@ -31,6 +31,7 @@ export function processFormDetection(message) {
     domain: message.domain,
     url: message.url,
     pageTitle: message.pageTitle,
+    forms: message.forms,
     ...analysis
   };
 }

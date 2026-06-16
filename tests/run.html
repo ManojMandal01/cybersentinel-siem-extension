@@ -206,6 +206,14 @@
         };
       }
 
+      if (value.includes('raw.githubusercontent.com')) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => '# mock scam list\nhttps://extracted-malicious.test/login\n0.0.0.0 hosts-malicious.test\n'
+        };
+      }
+
       return {
         ok: true,
         status: 200,

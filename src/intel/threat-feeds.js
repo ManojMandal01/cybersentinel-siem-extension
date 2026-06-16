@@ -53,6 +53,8 @@ export async function refreshThreatFeeds() {
     ['URLhaus', fetchUrlhaus]
   ];
 
+  const REPO_DOMAINS = /^(github\.com|raw\.githubusercontent\.com|githubusercontent\.com|gitlab\.com)$/i;
+
   for (const [feedName, fetcher] of fetchers) {
     if (shouldSkipFeed(cache, feedName, now)) continue;
 
@@ -60,7 +62,29 @@ export async function refreshThreatFeeds() {
       const urls = await fetcher();
       let added = 0;
       for (const url of urls) {
-        if (addThreatUrl(cache, url, feedName)) added++;
+        const domain = extractDomain(url);
+        if (domain && REPO_DOMAINS.test(domain)) {
+          const rawUrl = getRawUrl(url);
+          if (rawUrl) {
+            try {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 5000);
+              const resp = await fetch(rawUrl, { signal: controller.signal });
+              clearTimeout(timeoutId);
+              if (resp.ok) {
+                const text = await resp.text();
+                const extracted = extractUrlsAndDomains(text);
+                for (const extUrl of extracted) {
+                  if (addThreatUrl(cache, extUrl, feedName)) added++;
+                }
+              }
+            } catch (fetchErr) {
+              console.warn(`[CyberSentinel] Failed to fetch raw repo URL ${rawUrl}:`, fetchErr);
+            }
+          }
+        } else {
+          if (addThreatUrl(cache, url, feedName)) added++;
+        }
       }
       recordFeedStatus(cache, feedName, {
         ok: true,
@@ -133,6 +157,64 @@ function parseCsvLine(line) {
   }
   columns.push(current);
   return columns.map((value) => value.trim());
+}
+
+export function getRawUrl(url) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === 'github.com') {
+      const parts = parsed.pathname.split('/').filter(Boolean);
+      if (parts.length >= 4 && (parts[2] === 'blob' || parts[2] === 'raw')) {
+        const owner = parts[0];
+        const repo = parts[1];
+        const branch = parts[3];
+        const path = parts.slice(4).join('/');
+        return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
+      }
+    }
+    if (parsed.hostname === 'gitlab.com') {
+      const parts = parsed.pathname.split('/').filter(Boolean);
+      const blobIdx = parts.indexOf('blob');
+      if (blobIdx !== -1 && parts[blobIdx - 1] === '-') {
+        parts[blobIdx] = 'raw';
+        return `https://gitlab.com/${parts.join('/')}`;
+      }
+    }
+    return url;
+  } catch {
+    return url;
+  }
+}
+
+export function extractUrlsAndDomains(text) {
+  const results = [];
+  const lines = text.split('\n');
+  for (let line of lines) {
+    line = line.trim();
+    if (!line || line.startsWith('#') || line.startsWith('//')) {
+      continue;
+    }
+    line = line.split(/\s+#/)[0].trim();
+
+    const hostsMatch = line.match(/^(?:127\.0\.0\.1|0\.0\.0\.0)\s+(\S+)/);
+    if (hostsMatch) {
+      const domain = hostsMatch[1].trim();
+      if (domain && domain !== 'localhost') {
+        results.push(`https://${domain}`);
+      }
+      continue;
+    }
+
+    if (line.startsWith('http://') || line.startsWith('https://')) {
+      results.push(line);
+      continue;
+    }
+
+    if (/^[a-zA-Z0-9][-a-zA-Z0-9.]*\.[a-zA-Z]{2,24}(?:\/.*)?$/.test(line)) {
+      results.push(`https://${line}`);
+    }
+  }
+  return results;
 }
 
 export async function checkReputation(url) {

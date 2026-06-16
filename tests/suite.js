@@ -5,6 +5,7 @@ import { mapToMitre } from '../src/mitre/attack-mapper.js';
 import { executeHuntQuery } from '../src/hunting/query-engine.js';
 import { appendEvent, appendAlert, getAlerts } from '../src/shared/storage.js';
 import { config, processSecurityPipeline } from '../src/background/service-worker.js';
+import { getRawUrl, extractUrlsAndDomains, refreshThreatFeeds } from '../src/intel/threat-feeds.js';
 
 const tests = [];
 
@@ -171,6 +172,77 @@ test('pipeline: monitoring scope blocklist', async () => {
   assertEquals(outRes.reason, 'in_blocklist');
 
   config.detection.monitoringScope = 'all';
+});
+
+test('threat feed: getRawUrl resolution', () => {
+  assertEquals(
+    getRawUrl('https://github.com/user/repo/blob/main/list.txt'),
+    'https://raw.githubusercontent.com/user/repo/main/list.txt'
+  );
+  assertEquals(
+    getRawUrl('https://github.com/user/repo/raw/main/list.txt'),
+    'https://raw.githubusercontent.com/user/repo/main/list.txt'
+  );
+  assertEquals(
+    getRawUrl('https://gitlab.com/user/repo/-/blob/main/list.txt'),
+    'https://gitlab.com/user/repo/-/raw/main/list.txt'
+  );
+  assertEquals(
+    getRawUrl('https://example.com/normal/path'),
+    'https://example.com/normal/path'
+  );
+});
+
+test('threat feed: extractUrlsAndDomains parsing formats', () => {
+  const fileContent = `
+  # comment
+  malicious-domain.com
+  https://phishing-site.xyz/login
+  0.0.0.0 hosts-malicious.test # inline comment
+  127.0.0.1 localhost
+  `;
+  const extracted = extractUrlsAndDomains(fileContent);
+  assertEquals(extracted.length, 3);
+  assert(extracted.includes('https://malicious-domain.com'), 'Should extract malicious-domain.com');
+  assert(extracted.includes('https://phishing-site.xyz/login'), 'Should extract phishing-site.xyz/login');
+  assert(extracted.includes('https://hosts-malicious.test'), 'Should extract hosts-malicious.test');
+});
+
+test('threat feed: repository URL ingestion extracts IOCs and spares hosting domain', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const value = String(url);
+    if (value.includes('urlhaus.abuse.ch')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => '# urlhaus\n"1","2026-01-01 00:00:00","https://github.com/owner/repo/blob/main/links.txt","online","threat"\n'
+      };
+    }
+    if (value.includes('raw.githubusercontent.com/owner/repo/main/links.txt')) {
+      return {
+        ok: true,
+        status: 200,
+        text: async () => 'https://extracted-from-repo.test/scam\n'
+      };
+    }
+    return originalFetch(url);
+  };
+
+  try {
+    const emptyCache = { urls: {}, domains: {}, ips: {}, feeds: {}, lastUpdated: null };
+    await chrome.storage.local.set({ cybersentinel_threat_cache: emptyCache });
+
+    const newCache = await refreshThreatFeeds();
+    
+    assert(!newCache.domains['github.com'], 'github.com should not be flagged as a malicious domain');
+    assert(!newCache.urls['https://github.com/owner/repo/blob/main/links.txt'], 'github repository URL should not be marked malicious');
+    
+    assert(newCache.urls['https://extracted-from-repo.test/scam'], 'IOC extracted from github should be added to cache urls');
+    assert(newCache.domains['extracted-from-repo.test'], 'IOC domain extracted from github should be added to cache domains');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 async function runAll() {
