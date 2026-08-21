@@ -1,0 +1,14 @@
+{
+  "brands": ["paypal", "google", "microsoft", "apple", "amazon", "facebook", "netflix", "chase", "coinbase"],
+  "suspiciousTlds": [".xyz", ".top", ".club", ".click", ".gq", ".tk", ".ml", ".cf"],
+  "urlFeatures": {
+    "maxLength": 100,
+    "minEntropy": 4.5,
+    "maxTyposquatDistance": 2
+  },
+  "examples": [
+    { "url": "https://paypaI.com/login", "expected": "phishing", "reason": "homograph I vs l" },
+    { "url": "https://g00gle.com/signin", "expected": "phishing", "reason": "character substitution" },
+    { "url": "https://micr0soft-login.com", "expected": "phishing", "reason": "brand + suspicious domain" }
+  ]
+}

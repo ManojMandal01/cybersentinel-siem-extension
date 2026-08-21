@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.pem
+.env
+.DS_Store
+Thumbs.db
+playwright-report/
+test-results/
+tests/playwright/.cache/
